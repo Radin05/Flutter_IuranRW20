@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/kas_rt_controller.dart';
+import 'package:intl/intl.dart';
+import 'package:iwwrw20/app/modules/KasRt/controllers/kas_rt_controller.dart';
 
-class KasRtView extends StatelessWidget {
-  const KasRtView({super.key});
+class KasRtView extends GetView<KasRtController> {
+  const KasRtView({Key? key}) : super(key: key);
+
+  String formatRupiah(String? value) {
+    if (value == null) return 'Rp 0';
+    final number = double.tryParse(value) ?? 0;
+    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(number);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(KasRtController());
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kas RT'),
@@ -17,36 +22,32 @@ class KasRtView extends StatelessWidget {
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
-        }
+        } else if (controller.errorMessage.isNotEmpty) {
+          return Center(child: Text(controller.errorMessage.value));
+        } else {
+          final kas = controller.kasRtData.value;
 
-        if (controller.kasRt.value == null) {
-          return const Center(child: Text("Data Kas RT tidak tersedia."));
-        }
-
-        return Center(
-          child: Card(
-            margin: const EdgeInsets.all(20),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    "Jumlah Kas RT",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Rp ${controller.kasRt.value!.jumlahKasRt ?? '0'}",
-                    style: const TextStyle(fontSize: 24, color: Colors.green),
-                  ),
-                ],
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.account_balance_wallet, size: 40, color: Colors.green),
+                title: const Text(
+                  "Jumlah Kas RT",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  formatRupiah(kas.jumlahKasRt),
+                  style: const TextStyle(fontSize: 20, color: Colors.black),
+                ),
               ),
             ),
-          ),
-        );
+          );
+        }
       }),
     );
   }

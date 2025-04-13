@@ -22,12 +22,13 @@ class KasRtResponse {
 class KasRt {
   int? id;
   int? rtId;
-  Null pembayaranId;
-  Null pengeluaranKasRtId;
+  int? pembayaranId;
+  int? pengeluaranKasRtId;
   int? uangTambahanKasId;
   String? jumlahKasRt;
   String? createdAt;
   String? updatedAt;
+  Rt? rt;
 
   KasRt(
       {this.id,
@@ -37,7 +38,8 @@ class KasRt {
       this.uangTambahanKasId,
       this.jumlahKasRt,
       this.createdAt,
-      this.updatedAt});
+      this.updatedAt,
+      this.rt});
 
   KasRt.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -48,6 +50,7 @@ class KasRt {
     jumlahKasRt = json['jumlah_kas_rt'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
+    rt = json['rt'] != null ? new Rt.fromJson(json['rt']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -58,6 +61,34 @@ class KasRt {
     data['pengeluaran_kas_rt_id'] = this.pengeluaranKasRtId;
     data['uang_tambahan_kas_id'] = this.uangTambahanKasId;
     data['jumlah_kas_rt'] = this.jumlahKasRt;
+    data['created_at'] = this.createdAt;
+    data['updated_at'] = this.updatedAt;
+    if (this.rt != null) {
+      data['rt'] = this.rt!.toJson();
+    }
+    return data;
+  }
+}
+
+class Rt {
+  int? id;
+  String? namaRT;
+  String? createdAt;
+  String? updatedAt;
+
+  Rt({this.id, this.namaRT, this.createdAt, this.updatedAt});
+
+  Rt.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    namaRT = json['nama_RT'];
+    createdAt = json['created_at'];
+    updatedAt = json['updated_at'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['nama_RT'] = this.namaRT;
     data['created_at'] = this.createdAt;
     data['updated_at'] = this.updatedAt;
     return data;

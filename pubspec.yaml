@@ -35,6 +35,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
+  http: ^1.3.0
   get: ^4.7.2
   get_storage: ^2.1.1
   google_fonts: ^6.2.1
@@ -42,6 +43,7 @@ dependencies:
   lottie: ^3.1.3
   zoom_tap_animation: ^1.1.0
   intl: ^0.20.2
+  url_launcher: ^6.1.10
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +66,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+  - assets/images/header.jpg
+  - assets/images/g1.jpg
+  - assets/images/g2.jpg
+  - assets/images/g3.jpg
+  - assets/images/g4.jpg
+  - assets/images/g5.jpg
+  - assets/lottie/dompet.json
+
+  
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins/Poppins-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

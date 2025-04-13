@@ -18,15 +18,16 @@ class HomeView extends GetView<HomeController> {  // Deklarasi class HomeView de
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Lottie.network(
-              'https://gist.githubusercontent.com/olipiskandar/2095343e6b34255dcfb042166c4a3283/raw/d76e1121a2124640481edcf6e7712130304d6236/praujikom_kucing.json',
+            Lottie.asset(
+              'assets/lottie/dompet.json',
+              // 'https://gist.githubusercontent.com/olipiskandar/2095343e6b34255dcfb042166c4a3283/raw/d76e1121a2124640481edcf6e7712130304d6236/praujikom_kucing.json',
               fit: BoxFit.cover,
             ),
             const SizedBox(
               height: 15,
             ),
             Text(
-              'Aplikasi Portal Berita Indonesia',
+              'Rancamanyar Regency 2',
               style: GoogleFonts.roboto(
                 textStyle: const TextStyle(
                   fontWeight: FontWeight.bold,

@@ -1,12 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:iwwrw20/app/data/Keluarga.dart';
-import 'package:iwwrw20/app/data/Pembayaran.dart';
+import 'package:iwwrw20/app/data/Kegiatan.dart';
+import 'package:iwwrw20/app/data/KeluargaAll.dart';
+import 'package:iwwrw20/app/modules/dashboard/views/beranda_view.dart';
 import 'package:iwwrw20/app/modules/dashboard/views/kas_view.dart';
 import 'package:iwwrw20/app/modules/dashboard/views/keluarga_view.dart';
-import 'package:iwwrw20/app/modules/dashboard/views/pembayaran_view.dart';
-import 'package:iwwrw20/app/modules/dashboard/views/profile_view_view.dart';
+import 'package:iwwrw20/app/modules/dashboard/views/profile_view.dart';
 import 'package:iwwrw20/app/utils/api.dart';
 
 class DashboardController extends GetxController {
@@ -14,46 +14,42 @@ class DashboardController extends GetxController {
   final _getConnect = GetConnect();
   final token = GetStorage().read('token');
 
-  var keluarga = <Keluargas>[].obs;
-
-  var pembayaranList = <Pembayarans>[].obs;
-  var isLoadingPembayaran = false.obs;
+  final keluarga = <Keluargas>[].obs;
 
   final List<Widget> pages = [
-    KeluargaView(),
-    PembayaranView(),
-    KasView(),
-    ProfileView(),
+    BerandaView(),
+    const KeluargaView(),
+    const KasView(),
+    const ProfileView(),
   ];
+
+  // ✅ Tambahan untuk fitur filter RT
+  final rtList = <Rt>[].obs;
+  final selectedRt = Rxn<Rt>();
+  final filteredKeluarga = <Keluargas>[].obs;
+
+  final kegiatanList = <Kegiatan>[].obs;
 
   void changeIndex(int index) {
     selectedIndex.value = index;
-
-    if (index == 1) {
-      fetchPembayaran();
-    }
   }
 
-  Future<void> fetchPembayaran() async {
-    isLoadingPembayaran.value = true;
-
+  Future<void> fetchKegiatanRt() async {
     try {
       final response = await _getConnect.get(
-        BaseUrl.pembayaran,
+        BaseUrl.kegiatan_rt, // endpoint sesuai route kamu
         headers: {'Authorization': "Bearer $token"},
-        contentType: "application/json",
       );
 
-      if (response.statusCode == 200 && response.body['success']) {
-        final result = PembayaranResponse.fromJson(response.body);
-        pembayaranList.value = result.pembayarans ?? [];
+      if (response.statusCode == 200) {
+        final data = KegiatanResponse.fromJson(response.body);
+        kegiatanList.value = data.kegiatan ?? [];
       } else {
-        Get.snackbar('Gagal', 'Gagal memuat data pembayaran');
+        Get.snackbar("Gagal", "Tidak dapat mengambil data kegiatan");
       }
     } catch (e) {
-      Get.snackbar('Error', 'Terjadi kesalahan: $e');
-    } finally {
-      isLoadingPembayaran.value = false;
+      Get.snackbar(
+          "Error", "Terjadi kesalahan saat mengambil data kegiatan: $e");
     }
   }
 
@@ -79,8 +75,7 @@ class DashboardController extends GetxController {
 
       if (response.statusCode == 200 && response.body['success']) {
         Get.snackbar('Berhasil', 'Pembayaran berhasil ditambahkan');
-        fetchPembayaran(); // Refresh data
-        Get.back(); // Kembali ke halaman sebelumnya
+        Get.back();
       } else {
         Get.snackbar('Gagal', 'Gagal menyimpan pembayaran');
       }
@@ -89,18 +84,57 @@ class DashboardController extends GetxController {
     }
   }
 
-  Future<KeluargaResponse> getKeluarga() async {
-    final response = await _getConnect.get(
-      BaseUrl.keluarga,
-      headers: {'Authorization': "Bearer $token"},
-      contentType: "application/json",
-    );
-    return KeluargaResponse.fromJson(response.body);
+  Future<void> fetchKeluarga() async {
+    try {
+      final response = await _getConnect.get(
+        BaseUrl.keluarga,
+        headers: {'Authorization': "Bearer $token"},
+        contentType: "application/json",
+      );
+      final data = AllKeluargaResponse.fromJson(response.body);
+
+      if (data.keluargas != null) {
+        keluarga.value = data.keluargas!;
+        _generateRtList();
+        _filterBySelectedRt(); // Awal tampil semua atau default RT
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal mengambil data keluarga: $e');
+    }
+  }
+
+  void _generateRtList() {
+    final uniqueRts = <int, Rt>{};
+
+    for (var keluargaItem in keluarga) {
+      final rt = keluargaItem.rt;
+      if (rt != null && !uniqueRts.containsKey(rt.id)) {
+        uniqueRts[rt.id!] = rt;
+      }
+    }
+
+    rtList.assignAll(uniqueRts.values.toList());
+  }
+
+  void setSelectedRt(Rt rt) {
+    selectedRt.value = rt;
+    _filterBySelectedRt();
+  }
+
+  void _filterBySelectedRt() {
+    if (selectedRt.value == null) {
+      filteredKeluarga.assignAll(keluarga);
+    } else {
+      filteredKeluarga.assignAll(
+        keluarga.where((k) => k.rtId == selectedRt.value!.id).toList(),
+      );
+    }
   }
 
   @override
   void onInit() {
-    getKeluarga();
+    fetchKeluarga();
+    fetchKegiatanRt();
     super.onInit();
   }
 }
