@@ -9,7 +9,7 @@ abstract class Routes {
   static const KAS_RW = _Paths.KAS_RW;
   static const KAS_RT = _Paths.KAS_RT;
   static const PROFILE = _Paths.PROFILE;
-}
+  }
 
 abstract class _Paths {
   _Paths._();

@@ -43,7 +43,7 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.KAS_RT,
-      page: () => const KasRtView(),
+      page: () => KasRtView(),
       binding: KasRtBinding(),
     ),
     GetPage(

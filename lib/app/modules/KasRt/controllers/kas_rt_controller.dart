@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:iwwrw20/app/data/KasRt.dart';
+import 'package:iwwrw20/app/modules/KasRt/controllers/pengeluaran_kas_rt.dart';
 import 'package:iwwrw20/app/utils/api.dart';
 
 class KasRtController extends GetxController {
@@ -15,6 +16,21 @@ class KasRtController extends GetxController {
   void onInit() {
     fetchKasRt();
     super.onInit();
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    fetchKasRt();
+
+    final pengeluaranController = Get.find<PengeluaranRtController>();
+    final namaRt = box.read('nama_RT');
+
+    if (namaRt != null && namaRt is String && namaRt.isNotEmpty) {
+      pengeluaranController.fetchPengeluaranRt();
+    } else {
+      errorMessage.value = 'RT tidak ditemukan, silakan login ulang.';
+    }
   }
 
   void fetchKasRt() async {

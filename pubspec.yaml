@@ -44,6 +44,7 @@ dependencies:
   zoom_tap_animation: ^1.1.0
   intl: ^0.20.2
   url_launcher: ^6.1.10
+  flutter_widget_from_html: ^0.16.0
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +75,7 @@ flutter:
   - assets/images/g4.jpg
   - assets/images/g5.jpg
   - assets/lottie/dompet.json
+  - assets/lottie/kas.json
 
   
   fonts:
@@ -113,3 +115,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+dependency_overrides:
+  chewie: 1.7.0

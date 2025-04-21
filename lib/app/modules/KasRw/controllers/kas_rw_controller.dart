@@ -10,9 +10,6 @@ class KasRwController extends GetxController {
   final token = GetStorage().read('token');
   var kasRw = KasRw().obs;
 
-  // Ganti dengan URL endpoint API milikmu
-  final String apiUrl = 'https://example.com/api/kas-rw';
-
   @override
   void onInit() {
     super.onInit();

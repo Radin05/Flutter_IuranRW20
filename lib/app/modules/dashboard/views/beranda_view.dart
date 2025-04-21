@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:iwwrw20/app/modules/dashboard/controllers/dashboard_controller.dart';
 import 'package:iwwrw20/app/theme/build_step_widget.dart';
 import 'package:iwwrw20/app/theme/color.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +13,21 @@ class BerandaView extends StatelessWidget {
     Tab(icon: Icon(Icons.support_agent), text: "Layanan"),
     Tab(icon: Icon(Icons.event_note), text: "Kegiatan"),
   ];
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case "kerja bakti":
+        return Colors.blue;
+      case "sosial":
+        return Colors.green;
+      case "rapat":
+        return Colors.orange;
+      case "pengajian":
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +161,7 @@ class BerandaView extends StatelessWidget {
                             }),
                           ),
                         ),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -299,7 +317,565 @@ class BerandaView extends StatelessWidget {
                     ),
                   ),
                 ),
-                Center(child: _buildCard("Riwayat Iuran")),
+                Center(
+                  child: GetBuilder<DashboardController>(
+                    builder: (controller) {
+                      return FutureBuilder<List<dynamic>>(
+                        // Fetch both data sources simultaneously
+                        future: Future.wait([
+                          controller.fetchKegiatan(),
+                          controller.fetchKegiatanRt()
+                        ]),
+                        builder: (context, snapshot) {
+                          // Handle loading state
+                          if (snapshot.connectionState ==
+                                  ConnectionState.waiting ||
+                              controller.isLoadingKegiatan.value ||
+                              controller.isLoadingKegiatanRt.value) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+
+                          // Handle error state for either data source
+                          else if (snapshot.hasError ||
+                              controller.kegiatanError.value != null ||
+                              controller.kegiatanRtError.value != null) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      size: 60, color: Colors.red),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "Terjadi kesalahan: ${snapshot.error ?? controller.kegiatanError.value ?? controller.kegiatanRtError.value}",
+                                    style: const TextStyle(fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            controller.refreshKegiatan(),
+                                        child: const Text("Refresh RW"),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            controller.refreshKegiatanRt(),
+                                        child: const Text("Refresh RT"),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // If both lists are empty
+                          else if (controller.kegiatanList.isEmpty &&
+                              controller.kegiatanRtList.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.event_busy,
+                                      size: 60, color: Colors.grey),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    "Tidak ada kegiatan yang tersedia saat ini",
+                                    style: TextStyle(fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // Display both RW and RT activities
+                          return SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Center(
+                                  child: Text(
+                                    "Kegiatan Warga",
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.brownAccent,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Center(
+                                  child: Text(
+                                    "Daftar kegiatan yang akan diadakan di lingkungan RW 20",
+                                    style: TextStyle(fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // RW Activities Section
+                                if (controller.kegiatanList.isNotEmpty) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: const Text(
+                                      "Kegiatan RW 20",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.greenPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    itemCount: controller.kegiatanList.length,
+                                    itemBuilder: (context, index) {
+                                      final kegiatan =
+                                          controller.kegiatanList[index];
+                                      return Card(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 16),
+                                        elevation: 3,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.greenPrimary,
+                                                borderRadius:
+                                                    const BorderRadius.only(
+                                                  topLeft: Radius.circular(12),
+                                                  topRight: Radius.circular(12),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            12),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          AppColors.background,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                    child: Column(
+                                                      children: [
+                                                        Text(
+                                                          controller.formatDate(
+                                                              kegiatan.tanggalKegiatan ??
+                                                                  ""),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        Text(
+                                                          controller.formatTime(
+                                                              kegiatan.jamKegiatan ??
+                                                                  ""),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          kegiatan.namaKegiatan ??
+                                                              "Tanpa Nama",
+                                                          style:
+                                                              const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.location_on,
+                                                              size: 16,
+                                                              color: Colors
+                                                                  .white70,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Expanded(
+                                                              child: Text(
+                                                                kegiatan.tempatKegiatan ??
+                                                                    "Lokasi tidak tersedia",
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .white70,
+                                                                ),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: _getStatusColor(
+                                                          kegiatan.status ??
+                                                              ""),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16),
+                                                    ),
+                                                    child: Text(
+                                                      kegiatan.status ?? "N/A",
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    "Deskripsi:",
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    controller.stripHtmlTags(
+                                                        kegiatan.deskripsi ??
+                                                            "Tidak ada deskripsi"),
+                                                    style: const TextStyle(
+                                                        fontSize: 14),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ] else ...[
+                                  const Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 16),
+                                    child: Center(
+                                      child: Column(
+                                        children: [
+                                          Icon(Icons.event_busy,
+                                              size: 40, color: Colors.grey),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            "Tidak ada kegiatan RW yang tersedia saat ini",
+                                            style: TextStyle(fontSize: 14),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+
+                                const SizedBox(height: 32),
+
+                                // RT Activities Section
+                                if (controller.kegiatanRtList.isNotEmpty) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: const Text(
+                                      "Kegiatan RT",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.brownAccent,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    itemCount: controller.kegiatanRtList.length,
+                                    itemBuilder: (context, index) {
+                                      final kegiatan =
+                                          controller.kegiatanRtList[index];
+                                      return Card(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 16),
+                                        elevation: 3,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.brownAccent,
+                                                borderRadius:
+                                                    const BorderRadius.only(
+                                                  topLeft: Radius.circular(12),
+                                                  topRight: Radius.circular(12),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            12),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          AppColors.background,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                    child: Column(
+                                                      children: [
+                                                        Text(
+                                                          controller.formatDate(
+                                                              kegiatan.tanggalKegiatan ??
+                                                                  ""),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        Text(
+                                                          controller.formatTime(
+                                                              kegiatan.jamKegiatan ??
+                                                                  ""),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          kegiatan.namaKegiatan ??
+                                                              "Tanpa Nama",
+                                                          style:
+                                                              const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 18,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.location_on,
+                                                              size: 16,
+                                                              color: Colors
+                                                                  .white70,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Expanded(
+                                                              child: Text(
+                                                                kegiatan.tempatKegiatan ??
+                                                                    "Lokasi tidak tersedia",
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .white70,
+                                                                ),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.home,
+                                                              size: 16,
+                                                              color: Colors
+                                                                  .white70,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Text(
+                                                              "RT ${kegiatan.rtId}",
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: Colors
+                                                                    .white70,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: _getStatusColor(
+                                                          kegiatan.status ??
+                                                              ""),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16),
+                                                    ),
+                                                    child: Text(
+                                                      kegiatan.status ?? "N/A",
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    "Deskripsi:",
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    controller.stripHtmlTags(
+                                                        kegiatan.deskripsi ??
+                                                            "Tidak ada deskripsi"),
+                                                    style: const TextStyle(
+                                                        fontSize: 14),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ] else ...[
+                                  const Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 16),
+                                    child: Center(
+                                      child: Column(
+                                        children: [
+                                          Icon(Icons.event_busy,
+                                              size: 40, color: Colors.grey),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            "Tidak ada kegiatan RT yang tersedia saat ini",
+                                            style: TextStyle(fontSize: 14),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                )
               ],
             ),
           ),

@@ -36,7 +36,7 @@ class LoginController extends GetxController {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final user = data['user'];
-
+  
       // Simpan token dan informasi pengguna di GetStorage
       authToken.write('token', data['access_token']);
       authToken.write('user', user);

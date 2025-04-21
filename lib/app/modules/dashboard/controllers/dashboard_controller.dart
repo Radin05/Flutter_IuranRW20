@@ -1,7 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:iwwrw20/app/data/Kegiatan.dart';
+import 'package:iwwrw20/app/data/KegiatanRt.dart';
+import 'package:iwwrw20/app/data/KegiatanRw.dart';
 import 'package:iwwrw20/app/data/KeluargaAll.dart';
 import 'package:iwwrw20/app/modules/dashboard/views/beranda_view.dart';
 import 'package:iwwrw20/app/modules/dashboard/views/kas_view.dart';
@@ -14,8 +15,6 @@ class DashboardController extends GetxController {
   final _getConnect = GetConnect();
   final token = GetStorage().read('token');
 
-  final keluarga = <Keluargas>[].obs;
-
   final List<Widget> pages = [
     BerandaView(),
     const KeluargaView(),
@@ -23,67 +22,27 @@ class DashboardController extends GetxController {
     const ProfileView(),
   ];
 
-  // ✅ Tambahan untuk fitur filter RT
+  // Keluarga + RT Filter
+  final keluarga = <Keluargas>[].obs;
   final rtList = <Rt>[].obs;
   final selectedRt = Rxn<Rt>();
   final filteredKeluarga = <Keluargas>[].obs;
 
-  final kegiatanList = <Kegiatan>[].obs;
+  // Kegiatan RW
+  final kegiatanList = <KegiatanRw>[].obs;
+  final isLoadingKegiatan = false.obs;
+  final kegiatanError = RxnString();
+
+  // Kegiatan RT
+  final kegiatanRtList = <KegiatanRt>[].obs;
+  final isLoadingKegiatanRt = false.obs;
+  final kegiatanRtError = RxnString();
 
   void changeIndex(int index) {
     selectedIndex.value = index;
   }
 
-  Future<void> fetchKegiatanRt() async {
-    try {
-      final response = await _getConnect.get(
-        BaseUrl.kegiatan_rt, // endpoint sesuai route kamu
-        headers: {'Authorization': "Bearer $token"},
-      );
-
-      if (response.statusCode == 200) {
-        final data = KegiatanResponse.fromJson(response.body);
-        kegiatanList.value = data.kegiatan ?? [];
-      } else {
-        Get.snackbar("Gagal", "Tidak dapat mengambil data kegiatan");
-      }
-    } catch (e) {
-      Get.snackbar(
-          "Error", "Terjadi kesalahan saat mengambil data kegiatan: $e");
-    }
-  }
-
-  Future<void> tambahPembayaran({
-    required String noKk,
-    required DateTime tglPembayaran,
-    required int bulan,
-    required int tahun,
-    required int jumlah,
-  }) async {
-    try {
-      final response = await _getConnect.post(
-        BaseUrl.pembayaran,
-        {
-          'no_kk_keluarga': noKk,
-          'tgl_pembayaran': tglPembayaran.toIso8601String(),
-          'month': bulan,
-          'year': tahun,
-          'sejumlah': jumlah,
-        },
-        headers: {'Authorization': "Bearer $token"},
-      );
-
-      if (response.statusCode == 200 && response.body['success']) {
-        Get.snackbar('Berhasil', 'Pembayaran berhasil ditambahkan');
-        Get.back();
-      } else {
-        Get.snackbar('Gagal', 'Gagal menyimpan pembayaran');
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'Terjadi kesalahan: $e');
-    }
-  }
-
+  // Fetch Keluarga dan RT
   Future<void> fetchKeluarga() async {
     try {
       final response = await _getConnect.get(
@@ -96,7 +55,7 @@ class DashboardController extends GetxController {
       if (data.keluargas != null) {
         keluarga.value = data.keluargas!;
         _generateRtList();
-        _filterBySelectedRt(); // Awal tampil semua atau default RT
+        _filterBySelectedRt();
       }
     } catch (e) {
       Get.snackbar('Error', 'Gagal mengambil data keluarga: $e');
@@ -105,14 +64,11 @@ class DashboardController extends GetxController {
 
   void _generateRtList() {
     final uniqueRts = <int, Rt>{};
-
-    for (var keluargaItem in keluarga) {
-      final rt = keluargaItem.rt;
-      if (rt != null && !uniqueRts.containsKey(rt.id)) {
-        uniqueRts[rt.id!] = rt;
+    for (var k in keluarga) {
+      if (k.rt != null && !uniqueRts.containsKey(k.rt!.id)) {
+        uniqueRts[k.rt!.id!] = k.rt!;
       }
     }
-
     rtList.assignAll(uniqueRts.values.toList());
   }
 
@@ -131,10 +87,108 @@ class DashboardController extends GetxController {
     }
   }
 
+  // Kegiatan RW
+  Future<KegiatanRwResponse> fetchKegiatan() async {
+    try {
+      isLoadingKegiatan.value = true;
+      kegiatanError.value = null;
+
+      final response = await _getConnect.get(
+        BaseUrl.kegiatan_rw,
+        headers: {'Authorization': "Bearer $token"},
+        contentType: "application/json",
+      );
+
+      if (response.status.hasError) {
+        kegiatanError.value = 'Terjadi kesalahan pada server';
+        return KegiatanRwResponse(message: 'Error', kegiatan: []);
+      }
+
+      final data = KegiatanRwResponse.fromJson(response.body);
+      if (data.kegiatan != null) {
+        kegiatanList.assignAll(data.kegiatan!);
+      }
+
+      return data;
+    } catch (e) {
+      kegiatanError.value = 'Gagal mengambil data kegiatan RW: $e';
+      return KegiatanRwResponse(message: 'Error', kegiatan: []);
+    } finally {
+      isLoadingKegiatan.value = false;
+    }
+  }
+
+  Future<void> refreshKegiatan() async {
+    await fetchKegiatan();
+  }
+
+  // Kegiatan RT
+  Future<KegiatanRtResponse> fetchKegiatanRt() async {
+    try {
+      isLoadingKegiatanRt.value = true;
+      kegiatanRtError.value = null;
+
+      final response = await _getConnect.get(
+        BaseUrl.kegiatan_rt,
+        headers: {'Authorization': "Bearer $token"},
+        contentType: "application/json",
+      );
+
+      if (response.status.hasError) {
+        kegiatanRtError.value = 'Terjadi kesalahan pada server';
+        return KegiatanRtResponse(message: 'Error', kegiatan: []);
+      }
+
+      final data = KegiatanRtResponse.fromJson(response.body);
+      if (data.kegiatan != null) {
+        kegiatanRtList.assignAll(data.kegiatan!);
+      }
+
+      return data;
+    } catch (e) {
+      kegiatanRtError.value = 'Gagal mengambil data kegiatan RT: $e';
+      return KegiatanRtResponse(message: 'Error', kegiatan: []);
+    } finally {
+      isLoadingKegiatanRt.value = false;
+    }
+  }
+
+  Future<void> refreshKegiatanRt() async {
+    await fetchKegiatanRt();
+  }
+
+  // Helper: Format tanggal
+  String formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+      return "${date.day}\n${months[date.month - 1]}";
+    } catch (e) {
+      return "N/A";
+    }
+  }
+
+  // Helper: Format jam
+  String formatTime(String timeString) {
+    try {
+      final parts = timeString.split(":");
+      return "${parts[0]}:${parts[1]}";
+    } catch (e) {
+      return "N/A";
+    }
+  }
+
+  // Helper: Bersihkan tag HTML
+  String stripHtmlTags(String htmlText) {
+    final exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: false);
+    return htmlText.replaceAll(exp, "");
+  }
+
   @override
   void onInit() {
-    fetchKeluarga();
-    fetchKegiatanRt();
     super.onInit();
+    fetchKeluarga();
+    fetchKegiatan();
+    fetchKegiatanRt();
   }
 }
